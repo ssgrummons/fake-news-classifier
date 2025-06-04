@@ -6,7 +6,7 @@ This repository contains a modular and reproducible machine learning pipeline fo
 
 ### Business Problem
 
-The working assumption is that these different types of content will have different styles, vocabularies, topics, and tone that will allow us to infer the correct classification based on those semantic clues as opposed to content.
+The working assumption is that these different types of content will have different styles, vocabularies, topics, and tone that will allow us to infer the correct classification based on those semantic clues as
 
 This project is designed to do an initial exploration of that hypothesis and then go through the process of training a transformer model to accurately classify unlabeled texts.  To that end, we need to set up this project with these capabilities:
 
