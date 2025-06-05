@@ -4,6 +4,8 @@ import seaborn as sns
 from sklearn.cluster import KMeans
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
+
 
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401, needed for 3D projection
 
@@ -151,4 +153,58 @@ def plot_3d_umap_plotly(embeddings: np.ndarray,
         height=700
     )
     
+    fig.show()
+    
+
+def plot_3d_umap_by_label_layers(embeddings: np.ndarray,
+                                  labels: pd.Series,
+                                  label_name: str = "Label"):
+    """
+    Plots a 3D UMAP scatter plot using Plotly, plotting label groups in layers
+    to prevent dominant labels from obscuring others.
+
+    Args:
+        embeddings (np.ndarray): UMAP-reduced embeddings (n_samples, 3)
+        labels (pd.Series): Categorical labels for color coding
+        label_name (str): Label for legend
+
+    Returns:
+        None
+    """
+    df_plot = pd.DataFrame({
+        "UMAP1": embeddings[:, 0],
+        "UMAP2": embeddings[:, 1],
+        "UMAP3": embeddings[:, 2],
+        label_name: labels.values
+    })
+
+    fig = go.Figure()
+
+    # Plot label=1 first so it’s drawn on top
+    for label_value in sorted(df_plot[label_name].unique(), reverse=True):
+        df_sub = df_plot[df_plot[label_name] == label_value]
+        fig.add_trace(go.Scatter3d(
+            x=df_sub["UMAP1"],
+            y=df_sub["UMAP2"],
+            z=df_sub["UMAP3"],
+            mode="markers",
+            marker=dict(
+                size=4,
+                opacity=0.6
+            ),
+            name=f"{label_name}={label_value}"
+        ))
+
+    fig.update_layout(
+        title=f"3D UMAP Plot by {label_name}",
+        scene=dict(
+            xaxis_title="UMAP1",
+            yaxis_title="UMAP2",
+            zaxis_title="UMAP3"
+        ),
+        width=900,
+        height=700,
+        legend=dict(itemsizing='constant')
+    )
+
     fig.show()
