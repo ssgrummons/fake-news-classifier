@@ -168,3 +168,4 @@ deployment/vols/
 /notebooks/mlruns
 /notebooks/results
 /mlruns
+/data/raw

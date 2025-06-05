@@ -1,0 +1,82 @@
+schema: '2.0'
+stages:
+  preprocess_dataset_3:
+    cmd: PREPROCESS_CONFIG=config/dvc/dataset_3.yaml python src/data/preprocess.py
+    deps:
+    - path: config/dvc/dataset_3.yaml
+      hash: md5
+      md5: 238feab3f1147c6c6a0a2ee4e9684ecf
+      size: 483
+    - path: data/raw/train.csv
+      hash: md5
+      md5: 42d68a31340adb03a83401c9b75da4ed
+      size: 13520571
+    - path: src/data/preprocess.py
+      hash: md5
+      md5: b91ba2845aea01a6b2e1c89847315054
+      size: 3058
+    outs:
+    - path: data/processed/train_dataset_3.csv
+      hash: md5
+      md5: 512a725ffd415b4d8383bdf863063a92
+      size: 13123101
+  preprocess_dataset_1:
+    cmd: PREPROCESS_CONFIG=config/dvc/dataset_1.yaml python src/data/preprocess.py
+    deps:
+    - path: config/dvc/dataset_1.yaml
+      hash: md5
+      md5: b447281e00b3b0746a4caddab914bd9f
+      size: 488
+    - path: data/raw/train.csv
+      hash: md5
+      md5: 42d68a31340adb03a83401c9b75da4ed
+      size: 13520571
+    - path: src/data/preprocess.py
+      hash: md5
+      md5: b91ba2845aea01a6b2e1c89847315054
+      size: 3058
+    outs:
+    - path: data/processed/train_dataset_1.csv
+      hash: md5
+      md5: cf19570b0bd185d76b42946fa1d32865
+      size: 13251679
+  preprocess_dataset_2:
+    cmd: PREPROCESS_CONFIG=config/dvc/dataset_2.yaml python src/data/preprocess.py
+    deps:
+    - path: config/dvc/dataset_2.yaml
+      hash: md5
+      md5: e12b1be22aa30c10ecad81785884b466
+      size: 483
+    - path: data/raw/train.csv
+      hash: md5
+      md5: 42d68a31340adb03a83401c9b75da4ed
+      size: 13520571
+    - path: src/data/preprocess.py
+      hash: md5
+      md5: b91ba2845aea01a6b2e1c89847315054
+      size: 3058
+    outs:
+    - path: data/processed/train_dataset_2.csv
+      hash: md5
+      md5: 038739b52f288aa216f88d004f9366a6
+      size: 13246922
+  preprocess_dataset_4:
+    cmd: PREPROCESS_CONFIG=config/dvc/dataset_4.yaml python src/data/preprocess.py
+    deps:
+    - path: config/dvc/dataset_4.yaml
+      hash: md5
+      md5: 173520f9637320a9949cbc320e830dfb
+      size: 482
+    - path: data/raw/train.csv
+      hash: md5
+      md5: 42d68a31340adb03a83401c9b75da4ed
+      size: 13520571
+    - path: src/data/preprocess.py
+      hash: md5
+      md5: b91ba2845aea01a6b2e1c89847315054
+      size: 3058
+    outs:
+    - path: data/processed/train_dataset_4.csv
+      hash: md5
+      md5: cd3c5f5d40390c3a963569787f551a0e
+      size: 12941152
