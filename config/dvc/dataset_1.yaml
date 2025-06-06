@@ -6,9 +6,12 @@ test_output_path: "data/processed/test_dataset_1.csv"
 splitting:
   train_ratio: 0.9
   test_ratio: 0.1
-  sample_by_topic_parity: true
+  sample_by_topic_parity:
+    enabled: true
+    min_topic_size: 100
   stratified_sample:
     enabled: true
+    sample_n: 5000 
     stratify_by: 
       - "is_bs"
       - "topic"

@@ -23,19 +23,19 @@ stages:
           cache: false
           persist: true
 
-  process_dataset_2:
-    cmd: PROCESS_CONFIG=config/dvc/dataset_2.yaml python src/data/process.py
-    deps:
-      - src/data/process.py
-      - config/dvc/dataset_2.yaml
-      - data/interim/base.parquet
-      - data/interim/topics.parquet
-    outs:
-      - data/processed/train_dataset_2.csv:
-          cache: false
-          persist: true
-      - data/processed/test_dataset_2.csv:
-         cache: false
-         persist: true
+  # process_dataset_2:
+  #   cmd: PROCESS_CONFIG=config/dvc/dataset_2.yaml python src/data/process.py
+  #   deps:
+  #     - src/data/process.py
+  #     - config/dvc/dataset_2.yaml
+  #     - data/interim/base.parquet
+  #     - data/interim/topics.parquet
+  #   outs:
+  #     - data/processed/train_dataset_2.csv:
+  #         cache: false
+  #         persist: true
+  #     - data/processed/test_dataset_2.csv:
+  #        cache: false
+  #        persist: true
   
   
