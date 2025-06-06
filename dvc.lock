@@ -80,3 +80,23 @@ stages:
       hash: md5
       md5: cd3c5f5d40390c3a963569787f551a0e
       size: 12941152
+  build-base:
+    cmd: PREPROCESS_CONFIG=config/dvc/base.yaml python src/data/preprocess.py
+    deps:
+    - path: config/dvc/base.yaml
+      hash: md5
+      md5: a610e5b7ea5a6802a82e6f1d060bfb8e
+      size: 200
+    - path: src/data/preprocess.py
+      hash: md5
+      md5: 9be6c519ba3c444a1ee08d90f7d2b0e9
+      size: 6019
+    outs:
+    - path: data/interim/base.parquet
+      hash: md5
+      md5: 5b2082f8b4f20657c349945fa3ec7a62
+      size: 71123320
+    - path: data/interim/topics.parquet
+      hash: md5
+      md5: 6eca55eec3d14f763ef3e14249fdf086
+      size: 12754
