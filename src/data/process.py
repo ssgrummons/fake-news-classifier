@@ -57,7 +57,7 @@ def mask_entities_per_row(text, entities):
     return text
 
 def remove_duplicates(df):
-    return df.drop_duplicates()
+    return df.drop_duplicates(subset=["text"])
 
 def normalize_text_length(df, min_tokens, max_tokens):
     return df[df["text"].str.split().str.len().between(min_tokens, max_tokens)]
@@ -108,7 +108,7 @@ def run_data_processing(config: dict, df: pd.DataFrame) -> pd.DataFrame:
         logger.info(f"Cleaned text in {cleaned} rows using text_cleaning.clean_text()")
         
     if steps.get("mask_entities", {}).get("enabled", False):
-        sample_before = df[["text", "entities"]].copy()
+        sample_before = df["text"].copy()
         df["text"] = df.apply(lambda row: mask_entities_per_row(row['text'], row['entities']), axis=1)
         cleaned = (sample_before != df["text"]).sum()
         logger.info(f"Masked entities in {cleaned} rows using mask_entities_per_row()")
@@ -195,13 +195,13 @@ def main():
     train_output_path = Path(config["train_output_path"])
     train_output_path.parent.mkdir(parents=True, exist_ok=True)
     train_df.to_csv(train_output_path, index=False)
-    logger.info(f"Wrote processed training data to {train_output_path}")
+    logger.info(f"Wrote {len(train_df)} rows from processed training data to {train_output_path}")
 
     # Save raw test data (not processed)
     test_output_path = Path(config["test_output_path"])
     test_output_path.parent.mkdir(parents=True, exist_ok=True)
     test_df.to_csv(test_output_path, index=False)
-    logger.info(f"Wrote unprocessed test data to {test_output_path}")
+    logger.info(f"Wrote {len(test_df)} rows from unprocessed test data to {test_output_path}")
 
 if __name__ == "__main__":
     main()
