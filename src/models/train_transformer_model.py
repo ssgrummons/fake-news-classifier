@@ -162,8 +162,7 @@ def prepare_data(config: dict):
     dataset = prepare_dataset_from_csv(
         csv_path=data_path,
         label_col=data_config.get('label_column', 'is_bs'),
-        num_labels=model_config.get('num_labels', 2),
-        label_names=list(label2id.keys())
+        num_labels=model_config.get('num_labels', 2)
     )
     
     # Split dataset
