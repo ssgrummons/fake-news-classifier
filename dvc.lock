@@ -100,3 +100,31 @@ stages:
       hash: md5
       md5: 048b47fcf4c6946fe7971bc80554803c
       size: 13004
+  process_dataset_1:
+    cmd: PROCESS_CONFIG=config/dvc/dataset_1.yaml python src/data/process.py
+    deps:
+    - path: config/dvc/dataset_1.yaml
+      hash: md5
+      md5: 41ed0d3f6deaa6ae8e3eb75f9fd0e613
+      size: 746
+    - path: data/interim/base.parquet
+      hash: md5
+      md5: 05715fbc6ea55043c3ee037c30e409b5
+      size: 71122518
+    - path: data/interim/topics.parquet
+      hash: md5
+      md5: 048b47fcf4c6946fe7971bc80554803c
+      size: 13004
+    - path: src/data/process.py
+      hash: md5
+      md5: c57597aeb1a7aaacccc482c3c31c1a9b
+      size: 8109
+    outs:
+    - path: data/processed/test_dataset_1.csv
+      hash: md5
+      md5: 51fcf35412e643ed6b3ccd80acbf63a7
+      size: 5726664
+    - path: data/processed/train_dataset_1.csv
+      hash: md5
+      md5: 754b642662763492f602a92b13179722
+      size: 50301549

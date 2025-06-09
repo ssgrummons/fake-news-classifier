@@ -8,9 +8,9 @@ splitting:
   test_ratio: 0.1
   sample_by_topic_parity:
     enabled: true
-    min_topic_size: 100
+    min_topic_size: 500
   stratified_sample:
-    enabled: true
+    enabled: false
     sample_n: 5000 
     stratify_by: 
       - "is_bs"
