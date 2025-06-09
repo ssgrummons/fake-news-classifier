@@ -1,37 +1,37 @@
 input_path: "data/interim/base.parquet"
 
-train_output_path: "data/processed/train_dataset_1.csv"
-test_output_path: "data/processed/test_dataset_1.csv"
+train_output_path: "data/processed/train_dataset_2.csv"
+test_output_path: "data/processed/test_dataset_2.csv"
 
 splitting:
   train_ratio: 0.9
   test_ratio: 0.1
   sample_by_topic_parity:
     enabled: true
-    min_topic_size: 100
+    min_topic_size: 30
   stratified_sample:
     enabled: true
-    sample_n: 20000 
+    sample_n: 35000 
     stratify_by: 
       - "is_bs"
       
 
 processing:
-  remove_duplicates: false
+  remove_duplicates: true
   normalize_text_length:
-    enabled: false
-    min_tokens: 5
-    max_tokens: 200
+    enabled: true
+    min_tokens: 150
+    max_tokens: 1000
     truncate: true
     pad: true  
-  clean_text: false
+  clean_text: true
   mask_entities: 
-    enabled: false
+    enabled: true
     entity_types: 
       - "ORG"
       - "PER"
       - "LOC"
       - "MISC"
   filter_low_lexical_diversity:
-    enabled: false
+    enabled: true
     min_hhd_threshold: 0.7
