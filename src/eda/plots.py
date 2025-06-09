@@ -10,14 +10,14 @@ import plotly.graph_objects as go
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401, needed for 3D projection
 
 
-def plot_boxplot(df: pd.DataFrame, metric: str, group_col: str = 'author', title_prefix: str = ''):
+def plot_boxplot(df: pd.DataFrame, metric: str, group_col: str = 'is_bs', title_prefix: str = ''):
     """
     Plots a boxplot of the computed lengths grouped by a specified column.
     
     Args:
         df (pd.DataFrame): Dataframe with the computed length column.
         metric (str): Name of the computed length column.
-        group_col (str, optional): Name of the column to group by. Defaults to 'author'.
+        group_col (str, optional): Name of the column to group by. Defaults to 'is_bs'.
         title_prefix (str, optional): Prefix for the plot title. Defaults to an empty string.
     
     Returns:
@@ -36,10 +36,10 @@ def plot_boxplot(df: pd.DataFrame, metric: str, group_col: str = 'author', title
 def plot_cluster_label_distribution(df: pd.DataFrame, 
                                     kmeans_model: KMeans):
     """
-    Plot the distribution of cluster labels vs. author labels.  Used to identify clusters with high label overlap.
+    Plot the distribution of cluster labels vs. labels.  Used to identify clusters with high label overlap.
     
     Args:
-        df (pd.DataFrame): DataFrame containing the text and author labels.
+        df (pd.DataFrame): DataFrame containing the text and labels.
         kmeans_model (KMeans): KMeans model used to cluster the data. 
     
     Returns:
@@ -48,13 +48,11 @@ def plot_cluster_label_distribution(df: pd.DataFrame,
     labels = kmeans_model.labels_
     df['cluster'] = labels
 
-    # 3. Check the corresponding author labels with the cluster labels
     df['bs_cluster'] = df['cluster'].map(df.groupby('is_bs')['text'].transform('count'))
 
-    # 4. Check the distribution of author counts in each cluster
     plt.figure(figsize=(10, 6))
     df.groupby('cluster')['is_bs'].value_counts().plot(kind='bar')
-    plt.title('Distribution of Author Counts in Each Cluster')
+    plt.title('Distribution of BS Each Cluster')
     plt.xlabel('Cluster')
     plt.ylabel('Count')
     plt.xticks(rotation=45)
