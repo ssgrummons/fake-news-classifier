@@ -19,6 +19,8 @@ data:
   test_size: 0.2
   label_column: is_bs
   stratify_by_column: "labels"
+  use_ner: false
+  ner_format: "append"  # or "prepend" or "ignore"
 
 # Training configuration
 training:
