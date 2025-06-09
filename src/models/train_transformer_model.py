@@ -103,9 +103,7 @@ def create_model(config: dict):
     logger.info(f"Loading model: {model_config['model_name']}")
     model = AutoModelForSequenceClassification.from_pretrained(
         model_config['model_name'],
-        num_labels=model_config['num_labels'],
-        id2label=id2label,
-        label2id=label2id
+        num_labels=model_config['num_labels']
     )
     
     if model_config.get('gradient_checkpointing', False):
@@ -158,7 +156,15 @@ def prepare_data(config: dict):
         data_path = os.path.join(project_root, data_path)
     
     logger.info(f"Loading dataset from: {data_path}")
-    dataset = prepare_dataset_from_csv(data_path)
+    model_config = config['model']
+    data_config = config['data']
+
+    dataset = prepare_dataset_from_csv(
+        csv_path=data_path,
+        label_col=data_config.get('label_column', 'is_bs'),
+        num_labels=model_config.get('num_labels', 2),
+        label_names=list(label2id.keys())
+    )
     
     # Split dataset
     test_size = data_config.get('test_size', 0.2)
