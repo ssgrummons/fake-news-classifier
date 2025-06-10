@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 
 # Import your custom modules
 from src.data.preparation import prepare_dataset_from_csv
-from src.features.tokenization import tokenizer, id2label, label2id
+from src.features.tokenization import tokenizer
 from src.models.metrics import compute_metrics
 from src.mflow.experiment_tracking import start_run, log_params, log_metrics, log_model_from_checkpoint, log_dataset_info
 
