@@ -12,6 +12,7 @@ import yaml
 from datetime import datetime
 from pathlib import Path
 from collections import Counter
+from copy import deepcopy
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
@@ -21,15 +22,16 @@ from transformers import (
     TrainingArguments, 
     Trainer, 
     AutoModelForSequenceClassification, 
-    EarlyStoppingCallback
+    EarlyStoppingCallback,
+    PreTrainedModel
 )
 from dotenv import load_dotenv
 
 # Import your custom modules
-from src.data.preparation import prepare_dataset_from_csv
+from src.data.preparation import prepare_dataset_from_csv, prepare_eval_dataset_from_csv
 from src.features.tokenization import tokenizer
 from src.models.metrics import compute_metrics
-from src.mflow.experiment_tracking import start_run, log_params, log_metrics, log_model_from_checkpoint, log_dataset_info
+from src.mflow.experiment_tracking import start_run, log_params, log_metrics, log_model_from_checkpoint, log_dataset_info, MLflowCallback
 
 # Load environment variables
 load_dotenv()
@@ -96,7 +98,7 @@ def validate_dataset_split(train_dataset, eval_dataset):
         logger.warning(f"Eval labels: {eval_labels}")
 
 
-def create_model(config: dict):
+def create_model(config: dict) -> PreTrainedModel:
     """Create and configure the transformer model."""
     model_config = config['model']
     
@@ -132,6 +134,7 @@ def create_training_arguments(config: dict) -> TrainingArguments:
         weight_decay=float(training_config.get('weight_decay', 0.01)),
         eval_strategy=training_config.get('eval_strategy', 'epoch'),
         save_strategy=training_config.get('save_strategy', 'epoch'),
+        logging_strategy=training_config.get('logging_strategy', 'epoch'),
         report_to=training_config.get('report_to', []),
         load_best_model_at_end=bool(training_config.get('load_best_model_at_end', True)),
         metric_for_best_model=training_config.get('metric_for_best_model', 'f1_macro'),
@@ -186,7 +189,7 @@ def prepare_data(config: dict):
     return train_dataset, eval_dataset
 
 
-def train_model(config: dict):
+def train_model(config: dict) -> PreTrainedModel:
     """Main training function."""
     experiment_config = config['experiment']
     
@@ -224,7 +227,10 @@ def train_model(config: dict):
             eval_dataset=eval_dataset,
             processing_class=tokenizer,
             compute_metrics=compute_metrics,
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=early_stopping_patience)]
+            callbacks=[
+                EarlyStoppingCallback(early_stopping_patience=early_stopping_patience),
+                MLflowCallback()
+            ]
         )
         
         # Log parameters
@@ -258,6 +264,47 @@ def train_model(config: dict):
             logger.info(f"  {k}: {v}")
         
         logger.info("Training pipeline completed successfully!")
+    
+    return trainer.model
+
+
+def run_external_evaluations(config: dict, model, tokenizer):
+    from transformers import Trainer
+    from src.models.metrics import compute_metrics
+    import mlflow
+
+    logger.info("Starting external evaluations...")
+
+    eval_cfg = config.get("evaluation", {})
+    eval_sets = eval_cfg.get("evaluation_data_sets", [])
+
+    if not eval_sets:
+        logger.warning("No external evaluation datasets provided.")
+        return
+
+    # Clone and override TrainingArguments for prediction
+    training_args = deepcopy(create_training_arguments(config))
+    training_args.eval_strategy = "no"  # Avoid requiring eval_dataset
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        tokenizer=tokenizer,
+        compute_metrics=compute_metrics
+    )
+
+    for ds_cfg in eval_sets:
+        name = ds_cfg["name"]
+        path = ds_cfg["path"]
+        logger.info(f"Evaluating on external dataset: {name} from {path}")
+
+        dataset = prepare_eval_dataset_from_csv(path, config)
+
+        predictions = trainer.predict(dataset)
+        metrics = compute_metrics(predictions)
+
+        mlflow.log_metrics({f"{name}_{k}": v for k, v in metrics.items()})
+        logger.info(f"Logged evaluation metrics for {name}: {metrics}")
 
 def run_training_from_config_path(config_path: str):
     """
@@ -270,7 +317,8 @@ def run_training_from_config_path(config_path: str):
     logger.info(f"Experiment: {config.get('experiment', {}).get('name', 'unnamed')}")
     
     try:
-        train_model(config)
+        trained_model = train_model(config)
+        run_external_evaluations(config, trained_model, tokenizer)
     except Exception as e:
         logger.error(f"Training failed with error: {str(e)}")
         raise
@@ -294,7 +342,8 @@ def main():
     logger.info(f"Experiment: {config.get('experiment', {}).get('name', 'unnamed')}")
     
     try:
-        train_model(config)
+        trained_model = train_model(config)
+        run_external_evaluations(config, trained_model, tokenizer)
     except Exception as e:
         logger.error(f"Training failed with error: {str(e)}")
         raise

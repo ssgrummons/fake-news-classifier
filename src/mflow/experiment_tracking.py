@@ -1,6 +1,10 @@
 import mlflow
 import mlflow.transformers
-from transformers import TrainerCallback, pipeline
+from transformers import (TrainerCallback, 
+                          TrainingArguments, 
+                          TrainerState, 
+                          TrainerControl,
+                          pipeline)
 from pathlib import Path
 import shutil
 import os
@@ -124,21 +128,24 @@ def save_training_args(args, output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
     args_path = output_dir / "training_args.json"
     with open(args_path, "w") as f:
-        json.dump(vars(args), f, indent=2)
+        json.dump(args.to_dict(), f, indent=2) 
     mlflow.log_artifact(str(args_path), artifact_path="config")
 
 
 class MLflowCallback(TrainerCallback):
     """Custom callback to log evaluation metrics at the end of each epoch."""
-    def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+    def on_evaluate(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, metrics=None, **kwargs):
         if metrics is not None:
             for k, v in metrics.items():
                 if isinstance(v, (float, int)):
                     mlflow.log_metric(k, v, step=state.global_step)
 
-    def on_save(self, args, state, control, **kwargs):
-        log_model_from_checkpoint(model=kwargs["model"], tokenizer=kwargs["tokenizer"])
-        return control
-
-    def on_train_end(self, args, state, control, **kwargs):
+    def on_train_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         save_training_args(args, args.output_dir)
+    
+    def on_log(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, logs=None, **kwargs):
+        if logs is None:
+            return
+        for key, value in logs.items():
+            if isinstance(value, (int, float)):
+                mlflow.log_metric(key, value, step=state.global_step)
