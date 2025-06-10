@@ -1,0 +1,44 @@
+# Example experiment configuration for transformer training
+experiment:
+  name: "distilbert_baseline_experiment_1"
+  description: "Baseline experiment with DistilBERT"
+
+# MLFlow configuration
+mlflow:
+  mlruns_dir: "mlruns"  # Relative to project root
+
+# Model configuration
+model:
+  model_name: "distilbert/distilbert-base-uncased"
+  num_labels: 2
+  gradient_checkpointing: true
+
+# Data configuration
+data:
+  train_csv_path: "data/processed/train_dataset_1.csv"  # Relative to project root
+  test_size: 0.2
+  label_column: is_bs
+  stratify_by_column: "labels"
+  use_ner: false
+  ner_format: "append"  # or "prepend" or "ignore"
+
+# Training configuration
+training:
+  output_dir: "results"  # Relative to project root
+  learning_rate: 0.00002 
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 4
+  num_train_epochs: 10
+  weight_decay: 0.01
+  eval_strategy: "epoch"
+  save_strategy: "epoch"
+  report_to: []
+  load_best_model_at_end: true
+  metric_for_best_model: "f1_macro"
+  greater_is_better: true
+  push_to_hub: false
+  fp16: false
+  dataloader_num_workers: 0
+  dataloader_pin_memory: false
+  early_stopping_patience: 2

@@ -1,22 +1,27 @@
-# Fake News Classification Model
+# Bullshit Classification Model
 
-This repository contains a modular and reproducible machine learning pipeline for transformer-based text classification. It supports multiple datasets, full ML experiment tracking with MLflow, dataset versioning with DVC, and a clean separation between preprocessing, tokenization, modeling, and evaluation.
+In Harry Frankfurt's book, **On Bullshit**,[^1] Frankfurt distinguishes between lies and bullshit.  The liar is concerned about the truth and ensuring the other party does not find the truth.  The bullshittter, however, is not interested in whether what they say is true or false; truth is irrelevant to their goal.  
+
+I have often joked in the past about developing a "bullshotmeter," a tricorder-type device that would beep in the presence of bullshit.  This project is an attempt to bring that tech to life.  
+
+The hypothesis is that bullshit has its own semantic patterns.  Maybe it's more bombastic, more sure of itself, less nuanced, more focused on eliciting some kind of response from the other party.  This project is an attempt to model those semantic patterns and use them to develop a classifier for bullshit.
 
 ## Project Overview
 
-### Business Problem
+### Current Project Status
 
-The working assumption is that these different types of content will have different styles, vocabularies, topics, and tone that will allow us to infer the correct classification based on those semantic clues as
+_This project is not complete yet!_
 
-This project is designed to do an initial exploration of that hypothesis and then go through the process of training a transformer model to accurately classify unlabeled texts.  To that end, we need to set up this project with these capabilities:
+This project was built on the [Kaggle Fake News](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset/data) dataset.  The dataset contains a mix of news articles and their corresponding labels (fake or real). 
 
-* Enable rapid experimentation with multiple datasets
-* Track experiment results and models 
-* Reproduce data assets 
-* Keep code cleanly separated across EDA, preprocessing, feature engineering, and training
-* Automate functions for production pipeline deployments
+The EDA phase of the project highlighted a number of the challenges to developing a model that can generalize outside this dataset.
+- The article topics were imbalanced between real and fake news articles.  So it is likely that a model trained on this dataset will just learn to recognize topics most associated with bullshit and not the semantic patterns of bullshit.
+- The vocabulary of fake and real news articles was very distinct, enabling a simple Vectorized TF-IDF model to perform well on the dataset.  That might be sufficient for a simple social media classifier, but it may not generalize from bullshit in the news to bullshit on LinkedIn or the bullshit stories from your brother-in-law. 
+- The project right now is limited to the labeled data available.  To test if the model can generalize outside of this dataset, we will need to collect more tweets from influencers, more stories from your uncle, and more corporate memos about company culture.
 
-### Key Features
+### Project Structure
+
+Even with those limitations of the project as is, this repository does demonstrate valuable features that can be leveraged in other projects.  Here are some of the key features:
 
 * Modular Python package structure under `src/`
 * Text classification model fine-tuning with [Hugging Face Transformers](https://huggingface.co/docs/transformers/en/index)
@@ -24,6 +29,14 @@ This project is designed to do an initial exploration of that hypothesis and the
 * Tokenization decoupled from text cleansing
 * Logging for metrics, parameters, and model artifacts with [MLflow](https://mlflow.org/)
 * Managing data processing pipelines and versioning data assets with [DVC](https://dvc.org/)
+
+These features enable the following:
+
+* Rapid experimentation with multiple datasets
+* Track experiment results and models 
+* Reproduce data assets 
+* Keep code cleanly separated across EDA, preprocessing, feature engineering, and training
+* Automate functions for production pipeline deployments
 
 ---
 
@@ -38,6 +51,7 @@ This project is designed to do an initial exploration of that hypothesis and the
 │   └── pipelines/
 ├── data/                   # Data files
 │   ├── raw/
+│   ├── interim/
 │   ├── processed/
 │   └── inference/
 ├── notebooks/              # EDA and modeling exploration
@@ -70,7 +84,7 @@ All exploratory data analysis (EDA) was performed in Jupyter notebooks under the
 * Text cleaning assessments
 * Token length distribution visualizations
 
-Notebooks are labeled in order and well documented.  Relevant concepts and findings validating the initial hypothesis are dicussed in detail there.
+Notebooks are labeled in order and well documented.  
 
 ---
 
@@ -186,3 +200,4 @@ python src/inference/run_batch_inference.py
 
 Test structure scaffolding is present in `tests/`, and unit tests will be added as the pipeline matures.
 
+[^1]: Frankfurt, Harry G. On Bullshit. Princeton University Press, 2005.
