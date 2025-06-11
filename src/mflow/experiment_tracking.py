@@ -12,10 +12,12 @@ import json
 import hashlib
 
 
-def start_run(run_name: str = "transformer_experiment"):
+def start_run(run_name: str = "transformer_experiment", nested=False):
     """Starts or resumes an MLflow run."""
+    if mlflow.active_run() is not None:
+        mlflow.end_run()
     mlflow.set_experiment("transformer-text-classification")
-    return mlflow.start_run(run_name=run_name)
+    return mlflow.start_run(run_name=run_name, nested=nested)
 
 
 def log_params(params: dict):

@@ -169,3 +169,4 @@ deployment/vols/
 /notebooks/results
 /mlruns
 /data/raw
+/data/processed
