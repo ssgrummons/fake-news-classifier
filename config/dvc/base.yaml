@@ -3,4 +3,11 @@ dataset_name: "clmentbisaillon/fake-and-real-news-dataset"
 entity_model_name: "dbmdz/bert-large-cased-finetuned-conll03-english"
 label_name: "is_bs"
 feature_name: "text"
-
+legit_rss_feeds:
+  - 'https://www.sciencenews.org/feed'
+  - 'https://www.pewresearch.org/feed/'
+  - 'https://theconversation.com/topics/economics-488/articles.atom'
+  - 'https://theconversation.com/topics/extreme-weather-3799/articles.atom'
+bs_rss_feeds:
+  - 'https://www.naturalnews.com/rss.xml'
+max_articles: 5000

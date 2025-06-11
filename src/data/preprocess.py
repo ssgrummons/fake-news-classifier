@@ -9,6 +9,8 @@ import torch
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 from bertopic import BERTopic
 from sklearn.feature_extraction.text import CountVectorizer
+from newspaper import Article
+import feedparser
 
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
@@ -99,6 +101,37 @@ def apply_topic_modeling(texts: list) -> list:
     topics, _ = topic_model.fit_transform(texts)
     return topics
 
+def scrape_rss_feed(feed_url, max_articles=1000):
+    feed = feedparser.parse(feed_url)
+    data = []
+    for entry in feed.entries[:max_articles]:
+        url, date = entry.link, entry.published
+        art = Article(url)
+        art.download(); art.parse()
+        if len(art.text) > 200:  # filter for meatier content
+            data.append({
+                "url": url,
+                "title": art.title,
+                "date": date,
+                "text": art.text[:1000]  # limit excerpt to safe use
+            })
+    return pd.DataFrame(data)
+
+def create_df_from_feeds(feeds: list, max_articles=1000) -> pd.DataFrame:
+    df_list = []
+    for feed_url in feeds:
+        df = scrape_rss_feed(feed_url, max_articles)
+        df_list.append(df)
+    return pd.concat(df_list, ignore_index=True)
+
+def label_and_clean_feed_df(legit_df: pd.DataFrame,
+                            bs_df: pd.DataFrame,
+                            text_col: str = 'text',
+                            label_col: str = 'is_bs') -> pd.DataFrame:
+    df = pd.concat([legit_df, bs_df], ignore_index=True)
+    df[label_col] = df.apply(lambda row: 1 if row.name in bs_df.index else 0, axis=1)
+    df = df[[text_col, label_col]]
+    return df
 
 def main():
     config_path = Path(os.environ["PREPROCESS_CONFIG"])
@@ -111,6 +144,9 @@ def main():
     entity_model_name   = config["entity_model_name"]
     label_name          = config["label_name"]
     feature_name        = config["feature_name"]
+    legit_rss_feeds     = config["legit_rss_feeds"]
+    bs_rss_feeds        = config["bs_rss_feeds"]
+    max_articles        = config["max_articles"]
     
     logger.debug(f"Ensuring directory {interim_path} ...")
     interim_path.mkdir(parents=True, exist_ok=True)
@@ -123,6 +159,18 @@ def main():
     original_count = len(df)
     logger.info(f"Initial Cleansing of {original_count} rows of data...")
     df = clean_news_data(df, text_col=feature_name, label_col=label_name)
+    
+    logger.info(f"Processing Legitimate RSS Feeds...")
+    legit_df = create_df_from_feeds(legit_rss_feeds, max_articles)
+    logger.info(f"Downloaded {legit_df.shape[0]} rows of legitimate RSS data...")
+    logger.info(f"Processing BS RSS Feeds...")
+    bs_df = create_df_from_feeds(bs_rss_feeds, max_articles)
+    logger.info(f"Downloaded {bs_df.shape[0]} rows of BS RSS data...")
+    logger.info("Concatenating and Labeling RSS Data...")
+    rss_df = label_and_clean_feed_df(legit_df, bs_df, feature_name, label_name)
+    logger.info("Merging RSS Data with News Data...")
+    df = pd.concat([df, rss_df], ignore_index=True)
+    logger.info(f"Processed {df.shape[0]} total rows of data")
     
     logger.info(f"Running NER pipeline with model {entity_model_name}...")
     load_ner_pipeline(entity_model_name)
