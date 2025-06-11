@@ -15,6 +15,7 @@ Brotli @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_f7i
 cachetools==5.5.2
 catalogue==2.0.10
 certifi==2025.4.26
+chardet==5.2.0
 charset-normalizer==3.4.2
 click==8.2.1
 cloudpathlib==0.21.1

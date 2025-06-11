@@ -15,7 +15,7 @@ model:
 
 # Data configuration
 data:
-  train_csv_path: "data/processed/train_dataset_1.csv"  # Relative to project root
+  train_csv_path: "data/processed/train_dataset_2.csv"  # Relative to project root
   test_size: 0.2
   label_column: is_bs
   stratify_by_column: "labels"
@@ -48,6 +48,6 @@ training:
 evaluation:
   evaluation_data_sets:
     - name: "dvc"
-      path: data/processed/test_dataset_1.csv
+      path: data/processed/test_dataset_2.csv
     - name: "synthetic"
       path: data/raw/synthetic_data.csv
