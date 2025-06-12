@@ -11,6 +11,13 @@ from bertopic import BERTopic
 from sklearn.feature_extraction.text import CountVectorizer
 from newspaper import Article
 import feedparser
+from datasets import load_dataset, IterableDataset
+import time
+from collections import defaultdict
+from urllib.parse import urlparse
+
+from typing import List, Dict, Any
+
 
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
@@ -133,6 +140,93 @@ def label_and_clean_feed_df(legit_df: pd.DataFrame,
     df = df[[text_col, label_col]]
     return df
 
+def normalize_domains(domains: List[str]) -> set:
+    """Normalize domain names by stripping protocol prefixes and converting to lowercase."""
+    return set(d.lower().replace("https://", "").replace("http://", "") for d in domains)
+
+
+def is_target_domain(example: Dict[str, Any], all_domains: set) -> bool:
+    """Check if the example's domain is in the set of target domains."""
+    try:
+        domain = urlparse(example["url"]).netloc.lower()
+        return domain in all_domains
+    except Exception:
+        return False
+
+
+def load_filtered_mc4_stream(all_domains: List[str]) -> IterableDataset:
+    """Load a streaming MC4 dataset and filter by target domains."""
+    ds = load_dataset("mc4", name="en", split="train", streaming=True, trust_remote_code=True)
+    normalized_domains = normalize_domains(all_domains)
+    return filter(lambda ex: is_target_domain(ex, normalized_domains), ds)
+
+
+def collect_domain_samples(
+    filtered_ds: IterableDataset,
+    domains: List[str],
+    n: int = 10,
+    check_interval: int = 1000
+) -> List[Dict[str, str]]:
+    """Collect up to n samples per specified domain from a filtered dataset."""
+    domains = normalize_domains(domains)
+    per_domain_counts = defaultdict(int)
+    examples: List[Dict[str, str]] = []
+    seen = 0
+    start_time = time.time()
+
+    for ex in filtered_ds:
+        seen += 1
+        try:
+            domain = urlparse(ex["url"]).netloc.lower()
+        except Exception as e:
+            logger.warning(f"Skipping malformed URL: {ex.get('url')} | Error: {e}")
+            continue
+
+        if domain in domains and per_domain_counts[domain] < n:
+            examples.append({"text": ex["text"], "url": ex["url"]})
+            per_domain_counts[domain] += 1
+            logger.info(f"Added example from {domain}: {per_domain_counts[domain]}/{n}")
+
+        if seen % check_interval == 0:
+            elapsed = time.time() - start_time
+            logger.info(f"Processed {seen} examples in {elapsed:.1f} sec")
+            for d in domains:
+                logger.info(f"  {d}: {per_domain_counts[d]}/{n}")
+
+        if all(per_domain_counts[d] >= n for d in domains):
+            logger.info("✅ Collected enough examples from all domains.")
+            break
+
+    logger.info(f"Finished. Total processed: {seen}. Final counts:")
+    for d in domains:
+        logger.info(f"  {d}: {per_domain_counts[d]}")
+
+    return examples
+
+
+def label_domain_samples(
+    sample_list: List[Dict[str, str]],
+    bs_domains: List[str],
+    legit_domains: List[str],
+    label_name: str = "is_bs"
+) -> List[Dict[str, Any]]:
+    """Label samples based on whether their domains are in BS or legit domain lists."""
+    bs_domains_set = normalize_domains(bs_domains)
+    legit_domains_set = normalize_domains(legit_domains)
+
+    for ex in sample_list:
+        domain = urlparse(ex["url"]).netloc.lower()
+        if domain in bs_domains_set:
+            ex[label_name] = 1
+        elif domain in legit_domains_set:
+            ex[label_name] = 0
+    return sample_list
+
+
+def samples_to_dataframe(sample_list: List[Dict[str, Any]]) -> pd.DataFrame:
+    """Convert a list of labeled samples into a pandas DataFrame."""
+    return pd.DataFrame(sample_list)
+
 def main():
     config_path = Path(os.environ["PREPROCESS_CONFIG"])
     with open(config_path, "r") as f:
@@ -147,10 +241,15 @@ def main():
     legit_rss_feeds     = config["legit_rss_feeds"]
     bs_rss_feeds        = config["bs_rss_feeds"]
     max_articles        = config["max_articles"]
+    bs_domains          = config["mc4_sampler"].get("bs_domains", [])
+    legit_domains       = config["mc4_sampler"].get("legit_domains", [])
+    n                   = config["mc4_sampler"].get("samples_per_domain", 10)
+    
     
     logger.debug(f"Ensuring directory {interim_path} ...")
     interim_path.mkdir(parents=True, exist_ok=True)
     
+    ### Download Fake and Real News Raw Data from KaggleHub
     logger.info(f"Downloading raw dataset from KaggleHub...")
     raw_data_dir = download_data_from_kagglehub(dataset_name)
     logger.info(f"Dataset downloaded to {raw_data_dir}")
@@ -159,7 +258,26 @@ def main():
     original_count = len(df)
     logger.info(f"Initial Cleansing of {original_count} rows of data...")
     df = clean_news_data(df, text_col=feature_name, label_col=label_name)
+    logger.info(f"Processed {len(df)} rows of data from KaggleHub")
+    df['source'] = dataset_name
     
+    ### Download Legitimate and BS News Raw Data from MC4
+    logger.info(f"Downloading raw dataset from MC4...")
+    all_domains = bs_domains + legit_domains
+    filtered_ds = load_filtered_mc4_stream(all_domains)
+    samples = collect_domain_samples(filtered_ds, all_domains, n=n)
+    logger.info(f"Collected {len(samples)} samples from {len(all_domains)} domains")
+    logger.info("Labeling samples...")
+    labeled_samples = label_domain_samples(samples, bs_domains, legit_domains)
+    samples_df = samples_to_dataframe(labeled_samples)
+    logger.info(f"Labeled {samples_df.shape[0]} total rows")
+    samples_df = samples_df[[feature_name, label_name]]
+    samples_df['source'] = 'MC4'
+    logger.info(f"Merging MC4 Data with original data...")
+    df = pd.concat([df, samples_df], ignore_index=True)
+    logger.info(f"Processed {df.shape[0]} total rows of data")
+    
+    ### Collect Data from RSS Feeds
     logger.info(f"Processing Legitimate RSS Feeds...")
     legit_df = create_df_from_feeds(legit_rss_feeds, max_articles)
     logger.info(f"Downloaded {legit_df.shape[0]} rows of legitimate RSS data...")
@@ -168,15 +286,18 @@ def main():
     logger.info(f"Downloaded {bs_df.shape[0]} rows of BS RSS data...")
     logger.info("Concatenating and Labeling RSS Data...")
     rss_df = label_and_clean_feed_df(legit_df, bs_df, feature_name, label_name)
+    rss_df['source'] = 'RSS'
     logger.info("Merging RSS Data with News Data...")
     df = pd.concat([df, rss_df], ignore_index=True)
     logger.info(f"Processed {df.shape[0]} total rows of data")
     
+    ### Perform Entity Recognition
     logger.info(f"Running NER pipeline with model {entity_model_name}...")
     load_ner_pipeline(entity_model_name)
     df["entities"] = df[feature_name].apply(extract_entities)
     logger.info(f"Extracted entities on {df.shape[0]} rows of data...")
     
+    ### Perform Topic Modeling
     interim_topics_path = interim_path / "topics.parquet"
     logger.info("Running topic modeling...")
     load_vectorizer_model()

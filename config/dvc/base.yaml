@@ -10,4 +10,15 @@ legit_rss_feeds:
   - 'https://theconversation.com/topics/extreme-weather-3799/articles.atom'
 bs_rss_feeds:
   - 'https://www.naturalnews.com/rss.xml'
-max_articles: 5000
+max_articles: 500
+mc4_sampler:
+  bs_domains:
+    - www.naturalnews.com   
+    - cointelegraph.com
+    - goop.com
+  legit_domains:
+    - www.sciencenews.org 
+    - www.pewresearch.org  
+    - arxiv.org
+    - theconversation.com
+  samples_per_domain: 1000
