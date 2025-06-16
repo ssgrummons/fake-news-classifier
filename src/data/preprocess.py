@@ -11,10 +11,9 @@ from bertopic import BERTopic
 from sklearn.feature_extraction.text import CountVectorizer
 from newspaper import Article
 import feedparser
-from datasets import load_dataset, IterableDataset
-import time
-from collections import defaultdict
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
+import requests
+
 
 from typing import List, Dict, Any
 
@@ -153,57 +152,6 @@ def is_target_domain(example: Dict[str, Any], all_domains: set) -> bool:
     except Exception:
         return False
 
-
-def load_filtered_mc4_stream(all_domains: List[str]) -> IterableDataset:
-    """Load a streaming MC4 dataset and filter by target domains."""
-    ds = load_dataset("mc4", name="en", split="train", streaming=True, trust_remote_code=True)
-    normalized_domains = normalize_domains(all_domains)
-    return filter(lambda ex: is_target_domain(ex, normalized_domains), ds)
-
-
-def collect_domain_samples(
-    filtered_ds: IterableDataset,
-    domains: List[str],
-    n: int = 10,
-    check_interval: int = 1000
-) -> List[Dict[str, str]]:
-    """Collect up to n samples per specified domain from a filtered dataset."""
-    domains = normalize_domains(domains)
-    per_domain_counts = defaultdict(int)
-    examples: List[Dict[str, str]] = []
-    seen = 0
-    start_time = time.time()
-
-    for ex in filtered_ds:
-        seen += 1
-        try:
-            domain = urlparse(ex["url"]).netloc.lower()
-        except Exception as e:
-            logger.warning(f"Skipping malformed URL: {ex.get('url')} | Error: {e}")
-            continue
-
-        if domain in domains and per_domain_counts[domain] < n:
-            examples.append({"text": ex["text"], "url": ex["url"]})
-            per_domain_counts[domain] += 1
-            logger.info(f"Added example from {domain}: {per_domain_counts[domain]}/{n}")
-
-        if seen % check_interval == 0:
-            elapsed = time.time() - start_time
-            logger.info(f"Processed {seen} examples in {elapsed:.1f} sec")
-            for d in domains:
-                logger.info(f"  {d}: {per_domain_counts[d]}/{n}")
-
-        if all(per_domain_counts[d] >= n for d in domains):
-            logger.info("✅ Collected enough examples from all domains.")
-            break
-
-    logger.info(f"Finished. Total processed: {seen}. Final counts:")
-    for d in domains:
-        logger.info(f"  {d}: {per_domain_counts[d]}")
-
-    return examples
-
-
 def label_domain_samples(
     sample_list: List[Dict[str, str]],
     bs_domains: List[str],
@@ -222,10 +170,107 @@ def label_domain_samples(
             ex[label_name] = 0
     return sample_list
 
+def query_cc_index(domain: str, 
+                   match_pattern: str = "*", 
+                   limit: int = 50, 
+                   index: str ='CC-MAIN-2025-21-index'):
+    """
+    Queries the Common Crawl Index for a given domain and pattern.
 
-def samples_to_dataframe(sample_list: List[Dict[str, Any]]) -> pd.DataFrame:
-    """Convert a list of labeled samples into a pandas DataFrame."""
-    return pd.DataFrame(sample_list)
+    Args:
+        domain (str): Domain to search (e.g., 'www.naturalnews.com')
+        match_pattern (str): Pattern to match after domain (e.g., '*article*')
+        limit (int): Maximum number of URLs to return
+
+    Returns:
+        List[str]: List of matching URLs
+    """
+    index_url = (
+        f"http://index.commoncrawl.org/{index}?"
+        f"url={quote(domain + '/' + match_pattern)}&output=json"
+    )
+    response = requests.get(index_url, stream=True)
+    response.raise_for_status()
+
+    urls = []
+    for line in response.iter_lines():
+        if line:
+            record = eval(line.decode('utf-8'))  # Use `json.loads()` if unsure of eval safety
+            url = record.get("url")
+            if url and len(urls) < limit:
+                urls.append(url)
+
+    return urls
+
+def scrape_articles(urls: list[str], max_words: int = 500) -> pd.DataFrame:
+    """
+    Scrape full text from a list of article URLs using newspaper3k.
+
+    Args:
+        urls (list[str]): List of article URLs.
+        max_words (int): Max number of words to retain from article text.
+
+    Returns:
+        pd.DataFrame: DataFrame with columns ['url', 'title', 'text'].
+    """
+    data = []
+    for i, url in enumerate(urls):
+        try:
+            article = Article(url)
+            article.download()
+            article.parse()
+            words = article.text.split()
+            truncated_text = " ".join(words[:max_words])
+            data.append({
+                "url": url,
+                "title": article.title,
+                "text": truncated_text
+            })
+        except Exception as e:
+            logger.warning(f"Failed to scrape {url}: {e}")
+            continue
+
+    return pd.DataFrame(data)
+
+def scrape_and_label_cc_domains(
+    domain_entries: List[Dict[str, str]],
+    label: int,
+    samples_per_domain: int,
+    label_col: str = "is_bs",
+    max_words: int = 500
+) -> pd.DataFrame:
+    """
+    Scrape articles from CC-index for each domain entry and assign a label.
+
+    Args:
+        domain_entries (List[Dict[str, str]]): List of dicts with 'domain', 'pattern', and 'index'
+        label (int): 1 for BS, 0 for legit
+        samples_per_domain (int): How many URLs to scrape per domain
+        label_col (str): Name of label column
+        max_words (int): Max words per article to retain
+
+    Returns:
+        pd.DataFrame: DataFrame with columns ['url', 'title', 'text', label_col, 'source']
+    """
+    all_rows = []
+
+    for entry in domain_entries:
+        domain = entry["domain"]
+        pattern = entry.get("pattern", "*")
+        index = entry.get("index", "CC-MAIN-2025-21-index")
+        try:
+            urls = query_cc_index(domain, match_pattern=pattern, limit=samples_per_domain, index=index)
+            df = scrape_articles(urls, max_words=max_words)
+            df[label_col] = label
+            df["source"] = f"cc:{domain}"
+            all_rows.append(df)
+            logger.info(f"Scraped {len(df)} samples from {domain}")
+        except Exception as e:
+            logger.warning(f"Failed to scrape from {domain}: {e}")
+            continue
+
+    return pd.concat(all_rows, ignore_index=True) if all_rows else pd.DataFrame(columns=["url", "title", "text", label_col, "source"])
+
 
 def main():
     config_path = Path(os.environ["PREPROCESS_CONFIG"])
@@ -241,9 +286,9 @@ def main():
     legit_rss_feeds     = config["legit_rss_feeds"]
     bs_rss_feeds        = config["bs_rss_feeds"]
     max_articles        = config["max_articles"]
-    bs_domains          = config["mc4_sampler"].get("bs_domains", [])
-    legit_domains       = config["mc4_sampler"].get("legit_domains", [])
-    n                   = config["mc4_sampler"].get("samples_per_domain", 10)
+    bs_domains          = config["cc_index_scraping"].get("bs_domains", [])
+    legit_domains       = config["cc_index_scraping"].get("legit_domains", [])
+    n                   = config["cc_index_scraping"].get("samples_per_domain", 10)
     
     
     logger.debug(f"Ensuring directory {interim_path} ...")
@@ -261,21 +306,29 @@ def main():
     logger.info(f"Processed {len(df)} rows of data from KaggleHub")
     df['source'] = dataset_name
     
-    ### Download Legitimate and BS News Raw Data from MC4
-    logger.info(f"Downloading raw dataset from MC4...")
-    all_domains = bs_domains + legit_domains
-    filtered_ds = load_filtered_mc4_stream(all_domains)
-    samples = collect_domain_samples(filtered_ds, all_domains, n=n)
-    logger.info(f"Collected {len(samples)} samples from {len(all_domains)} domains")
-    logger.info("Labeling samples...")
-    labeled_samples = label_domain_samples(samples, bs_domains, legit_domains)
-    samples_df = samples_to_dataframe(labeled_samples)
-    logger.info(f"Labeled {samples_df.shape[0]} total rows")
-    samples_df = samples_df[[feature_name, label_name]]
-    samples_df['source'] = 'MC4'
-    logger.info(f"Merging MC4 Data with original data...")
-    df = pd.concat([df, samples_df], ignore_index=True)
-    logger.info(f"Processed {df.shape[0]} total rows of data")
+    ### Scrape Data from CC-Index
+    logger.info("Scraping BS domains from CC-index...")
+    cc_bs_df = scrape_and_label_cc_domains(
+        domain_entries=bs_domains,
+        label=1,
+        samples_per_domain=n,
+        label_col=label_name
+    )
+
+    logger.info("Scraping legit domains from CC-index...")
+    cc_legit_df = scrape_and_label_cc_domains(
+        domain_entries=legit_domains,
+        label=0,
+        samples_per_domain=n,
+        label_col=label_name
+    )
+
+    cc_df = pd.concat([cc_bs_df, cc_legit_df], ignore_index=True)
+    logger.info(f"Collected {cc_df.shape[0]} rows from CC-index scraping...")
+    logger.info("Appending CC-index data to master DataFrame...")
+    cc_df = cc_df[[feature_name, label_name]]
+    cc_df['source'] = 'CC-index'
+    df = pd.concat([df, cc_df], ignore_index=True)
     
     ### Collect Data from RSS Feeds
     logger.info(f"Processing Legitimate RSS Feeds...")
