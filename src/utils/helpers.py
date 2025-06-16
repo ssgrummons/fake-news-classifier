@@ -1,6 +1,7 @@
 from sklearn.metrics import classification_report
 import pandas as pd
 from IPython.display import display, Markdown
+import yaml
 
 def classification_report_to_df(y_true, y_pred, digits=2) -> pd.DataFrame:
     """
@@ -28,3 +29,7 @@ def classification_report_to_df(y_true, y_pred, digits=2) -> pd.DataFrame:
 
 def md_print(text: str):
     display(Markdown(text))
+    
+def load_config(config_path):
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f)
