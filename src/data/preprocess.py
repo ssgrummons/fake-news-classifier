@@ -62,7 +62,8 @@ def load_topic_model(vectorizer_model,
     hdbscan_model = HDBSCAN(
         min_cluster_size=min_cluster_size, 
         metric=metric, 
-        cluster_selection_method=cluster_selection_method
+        cluster_selection_method=cluster_selection_method,
+        prediction_data=True
     )
 
     topic_model = BERTopic(
@@ -76,10 +77,10 @@ def load_topic_model(vectorizer_model,
 
 def load_ner_pipeline(model_name: str):
     global ner
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    device = 0 if torch.backends.mps.is_available() else -1
     model = AutoModelForTokenClassification.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    ner = pipeline("ner", model=model, tokenizer=tokenizer, device=0 if device == "mps" else -1, grouped_entities=True)
+    ner = pipeline("ner", model=model, tokenizer=tokenizer, device=device, grouped_entities=True)
     
 def extract_entities(text: str) -> list:
     global ner
@@ -103,16 +104,18 @@ def main():
 
     interim_path                = Path(config["interim_path"])
     input_path                  = Path(config["input_path"])
-    entity_model_name           = config["entity_model_name"]
-    file_name                   = config["file_name"]
-    embedding_model_name        = config["embedding_model_name"]
-    n_neighbors                 = config["n_neighbors"]
-    n_components                = config["n_components"]
-    min_dist                    = config["min_dist"]
-    metric                      = config["metric"]
-    min_cluster_size            = config["min_cluster_size"]
-    cluster_selection_method    = config["cluster_selection_method"]
-    feature_name                = config["feature_name"]
+    entity_model_name           = config.get("entity_model_name", "dbmdz/bert-large-cased-finetuned-conll03-english")
+    file_name                   = config.get("file_name", "base.parquet")
+    embedding_model_name        = config.get("embedding_model_name", "all-MiniLM-L6-v2")
+    n_neighbors                 = config.get("n_neighbors", 30)
+    n_components                = config.get("n_components", 5)
+    min_dist                    = config.get("min_dist", 0.4)
+    metric                      = config.get("metric", 'euclidean')
+    min_cluster_size            = config.get("min_cluster_size", 60)
+    cluster_selection_method    = config.get("cluster_selection_method", 'eom')
+    feature_name                = config.get("feature_name", "text")
+    label_name                  = config.get("label_name", "is_bs")
+
     
     logger.debug(f"Ensuring directory {interim_path} ...")
     interim_path.mkdir(parents=True, exist_ok=True)
@@ -128,8 +131,14 @@ def main():
     ### Perform Topic Modeling
     interim_topics_path = interim_path / "topics.parquet"
     logger.info("Running topic modeling...")
-    load_vectorizer_model()
-    load_topic_model(vectorizer_model)
+    vectorizer_model = load_vectorizer_model()
+    load_topic_model(vectorizer_model, 
+                     n_neighbors, 
+                     n_components, 
+                     min_dist,
+                     metric,
+                     min_cluster_size,
+                     cluster_selection_method)
     topics, probs = topic_model.fit_transform(df[feature_name].tolist())
     df["topic"] = topics
     

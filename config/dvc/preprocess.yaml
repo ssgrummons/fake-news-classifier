@@ -1,6 +1,6 @@
 interim_path: "data/interim"
 input_path: "data/raw"
-entity_model_name: "dbmdz/bert-large-cased-finetuned-conll03-english"
+entity_model_name: "dslim/bert-base-NER"
 file_name: "base.parquet"
 embedding_model_name: "all-MiniLM-L6-v2"
 n_neighbors: 30
@@ -10,3 +10,4 @@ metric: 'euclidean'
 min_cluster_size: 60
 cluster_selection_method: 'eom'
 feature_name: "text"
+label_name: "is_bs"
