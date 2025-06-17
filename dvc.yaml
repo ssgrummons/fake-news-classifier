@@ -8,7 +8,7 @@ stages:
       - data/raw/base.parquet
 
   preprocess:
-    cmd: PREPROCESS_CONFIG=config/dvc/base.yaml python src/data/preprocess.py
+    cmd: PREPROCESS_CONFIG=config/dvc/preprocess.yaml python src/data/preprocess.py
     deps:
       - src/data/preprocess.py
       - config/dvc/preprocess.yaml

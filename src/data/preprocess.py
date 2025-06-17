@@ -102,6 +102,7 @@ def main():
         config = yaml.safe_load(f)
 
     interim_path                = Path(config["interim_path"])
+    input_path                  = Path(config["input_path"])
     entity_model_name           = config["entity_model_name"]
     file_name                   = config["file_name"]
     embedding_model_name        = config["embedding_model_name"]
@@ -111,11 +112,12 @@ def main():
     metric                      = config["metric"]
     min_cluster_size            = config["min_cluster_size"]
     cluster_selection_method    = config["cluster_selection_method"]
+    feature_name                = config["feature_name"]
     
     logger.debug(f"Ensuring directory {interim_path} ...")
     interim_path.mkdir(parents=True, exist_ok=True)
     
-    df = pd.read_parquet(interim_path / file_name)
+    df = pd.read_parquet(input_path / file_name)
     
     ### Perform Entity Recognition
     logger.info(f"Running NER pipeline with model {entity_model_name}...")
