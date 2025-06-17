@@ -1,9 +1,18 @@
 stages:
   build-base:
-    cmd: PREPROCESS_CONFIG=config/dvc/base.yaml python src/data/preprocess.py
+    cmd: BASE_CONFIG=config/dvc/base.yaml python src/data/download.py
+    deps:
+      - src/data/download.py
+      - config/dvc/base.yaml
+    outs:
+      - data/raw/base.parquet
+
+  preprocess:
+    cmd: PREPROCESS_CONFIG=config/dvc/preprocess.yaml python src/data/preprocess.py
     deps:
       - src/data/preprocess.py
-      - config/dvc/base.yaml
+      - config/dvc/preprocess.yaml
+      - data/raw/base.parquet
     outs:
       - data/interim/base.parquet
       - data/interim/topics.parquet

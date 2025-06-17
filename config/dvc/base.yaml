@@ -1,6 +1,62 @@
-interim_path: "data/interim"
+output_path: "data/raw"
 dataset_name: "clmentbisaillon/fake-and-real-news-dataset"
-entity_model_name: "dbmdz/bert-large-cased-finetuned-conll03-english"
+#entity_model_name: "dbmdz/bert-large-cased-finetuned-conll03-english"
 label_name: "is_bs"
 feature_name: "text"
-
+legit_rss_feeds:
+  - 'https://www.sciencenews.org/feed'
+  - 'https://www.pewresearch.org/feed/'
+  - 'https://theconversation.com/topics/economics-488/articles.atom'
+  - 'https://theconversation.com/topics/extreme-weather-3799/articles.atom'
+bs_rss_feeds:
+  - 'https://www.naturalnews.com/rss.xml'
+max_articles: 500
+cc_index_scraping:
+  bs_domains:
+    - domain: www.naturalnews.com
+      pattern: '202*'
+      index: CC-MAIN-2025-21-index
+    - domain: gemini.com
+      pattern: 'blog/*'
+      index: CC-MAIN-2025-21-index
+    - domain: www.icr.org
+      pattern: 'article/*'
+      index: CC-MAIN-2025-21-index
+    - domain: thetruthaboutvaccines.com
+      pattern: '*'
+      index: CC-MAIN-2025-21-index
+    - domain: cryptopotato.com
+      pattern: '*'
+      index: CC-MAIN-2025-21-index
+    - domain: addicted2success.com
+      pattern: 'entrepreneur-profile/*'
+      index: CC-MAIN-2025-21-index
+    - domain: techbullion.com
+      pattern: '*'
+      index: CC-MAIN-2023-50-index
+  legit_domains:
+    - domain: www.sciencenews.org 
+      pattern: 'article/*'
+      index: CC-MAIN-2025-21-index
+    - domain: urban.org
+      pattern: 'urban-wire*'
+      index: CC-MAIN-2025-21-index
+    - domain: arxiv.org
+      pattern: 'abs/*'
+      index: CC-MAIN-2025-21-index
+    - domain: theconversation.com
+      pattern: '*'
+      index: CC-MAIN-2023-50-index
+    - domain: blockworks.co
+      pattern: 'news/*'
+      index: CC-MAIN-2023-50-index
+    - domain: biologos.org
+      pattern: 'common-questions/*'
+      index: CC-MAIN-2023-50-index
+    - domain: kff.org
+      pattern: 'other/issue-brief/*'
+      index: CC-MAIN-2025-21-index
+    - domain:  thenewstack.io
+      pattern: '*'
+      index: CC-MAIN-2023-50-index
+  samples_per_domain: 1000
