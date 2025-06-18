@@ -1,0 +1,7 @@
+model_name: TBD
+alias: champion
+input_path: ./data/raw/test.csv
+output_path: ./data/inference/results.csv
+scored_output_path: ./data/inference/results_with_scores.csv
+text_column: text
+output_column: is_bs
