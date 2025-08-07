@@ -1,23 +1,21 @@
-# Bullshit Classification Model
+# BS Classification Model
 
-In Harry Frankfurt's book, **On Bullshit**,[^1] Frankfurt distinguishes between lies and bullshit.  The liar is concerned about the truth and ensuring the other party does not find the truth.  The bullshittter, however, is not interested in whether what they say is true or false; truth is irrelevant to their goal.  
+In Harry Frankfurt's book, **On BS**,[^1] Frankfurt distinguishes between lies and BS.  The liar is concerned about the truth and ensuring the other party does not find the truth.  The BStter, however, is not interested in whether what they say is true or false; truth is irrelevant to their goal.  
 
-I have often joked in the past about developing a "bullshotmeter," a tricorder-type device that would beep in the presence of bullshit.  This project is an attempt to bring that tech to life.  
+I have often joked in the past about developing a "bullshotmeter," a tricorder-type device that would beep in the presence of BS.  This project is an attempt to bring that tech to life.  
 
-The hypothesis is that bullshit has its own semantic patterns.  Maybe it's more bombastic, more sure of itself, less nuanced, more focused on eliciting some kind of response from the other party.  This project is an attempt to model those semantic patterns and use them to develop a classifier for bullshit.
+The hypothesis is that BS has its own semantic patterns.  Maybe it's more bombastic, more sure of itself, less nuanced, more focused on eliciting some kind of response from the other party.  This project is an attempt to model those semantic patterns and use them to develop a classifier for BS.
 
 ## Project Overview
 
 ### Current Project Status
 
-_This project is not complete yet!_
-
-This project was built on the [Kaggle Fake News](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset/data) dataset.  The dataset contains a mix of news articles and their corresponding labels (fake or real). 
+This project was started on the [Kaggle Fake News](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset/data) dataset.  The dataset contains a mix of news articles and their corresponding labels (fake or real). 
 
 The EDA phase of the project highlighted a number of the challenges to developing a model that can generalize outside this dataset.
-- The article topics were imbalanced between real and fake news articles.  So it is likely that a model trained on this dataset will just learn to recognize topics most associated with bullshit and not the semantic patterns of bullshit.
-- The vocabulary of fake and real news articles was very distinct, enabling a simple Vectorized TF-IDF model to perform well on the dataset.  That might be sufficient for a simple social media classifier, but it may not generalize from bullshit in the news to bullshit on LinkedIn or the bullshit stories from your brother-in-law. 
-- The project right now is limited to the labeled data available.  To test if the model can generalize outside of this dataset, we will need to collect more tweets from influencers, more stories from your uncle, and more corporate memos about company culture.
+- The article topics were imbalanced between real and fake news articles.  So it is likely that a model trained on this dataset will just learn to recognize topics most associated with BS and not the semantic patterns of BS.
+- The vocabulary of fake and real news articles was very distinct, enabling a simple Vectorized TF-IDF model to perform well on the dataset.  That might be sufficient for a simple social media classifier, but it may not generalize from BS in the news to BS on LinkedIn or the BS stories from your brother-in-law. 
+- I've extended this project to include other data sources from both reputable and irreputable sites.  This has improved the generalization of the model. 
 
 ### Project Structure
 
